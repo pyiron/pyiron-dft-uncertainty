@@ -2,7 +2,6 @@ import numpy as np
 import pandas
 from pymatgen.ext.matproj import MPRester
 from ase.data import reference_states, atomic_numbers
-from pyiron_base import Settings
 from pyiron_atomistics import Project
 from pyiron_atomistics.atomistics.master.murnaghan import eV_div_A3_to_GPa
 from pyiron_atomistics.vasp.potential import VaspPotential
@@ -592,12 +591,9 @@ def double_smooth(mat):
 
 
 def get_potential_encut(el, default_potential):
-    s = Settings()
     vp = VaspPotential()
     df_pot = vp.pbe.find(element=el)
-    encut_low = [
-        s_path for s_path in s.resource_paths if "resources" in s_path
-    ][0] + "/vasp/potentials/" + df_pot[df_pot.Name == default_potential + "-gga-pbe"].ENMAX.values[0]
+    encut_low = df_pot[df_pot.Name == default_potential + "-gga-pbe"].ENMAX.values[0]
     return float(encut_low)
 
 
