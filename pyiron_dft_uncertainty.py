@@ -2,6 +2,7 @@ import numpy as np
 import pandas
 from pymatgen.ext.matproj import MPRester
 from ase.data import reference_states, atomic_numbers
+from pyiron_base import Settings
 from pyiron_atomistics import Project
 from pyiron_atomistics.atomistics.master.murnaghan import eV_div_A3_to_GPa
 from pyiron_atomistics.vasp.potential import VaspPotential
@@ -82,6 +83,10 @@ Rn 400 13"""
 
 # https://cms.mpi.univie.ac.at/vasp/vasp/Recommended_PAW_potentials_DFT_calculations_using_vasp_5_2.html
 # Element (and appendix)	default cutoff ENMAX (eV)	valency
+
+from pyiron.vasp.potential import VaspPotential
+
+
 basic_pot_text = """\
 H	250	1
 H AE	1000	1
@@ -591,6 +596,7 @@ def double_smooth(mat):
 
 
 def get_potential_encut(el, default_potential):
+    s = Settings()
     vp = VaspPotential()
     df_pot = vp.pbe.find(element=el)
     encut_low = float([
