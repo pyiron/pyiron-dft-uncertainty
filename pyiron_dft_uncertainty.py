@@ -595,10 +595,10 @@ def get_potential_encut(el, default_potential):
     s = Settings()
     vp = VaspPotential()
     df_pot = vp.pbe.find(element=el)
-    encut_low = float([
+    encut_low = [
         s_path for s_path in s.resource_paths if "resources" in s_path
-    ][0] + "/vasp/potentials/" + df_pot[df_pot.Name == default_potential + "-gga-pbe"].ENMAX.values[0])
-    return encut_low
+    ][0] + "/vasp/potentials/" + df_pot[df_pot.Name == default_potential + "-gga-pbe"].ENMAX.values[0]
+    return float(encut_low)
 
 
 def get_delta_project_recommendation():
