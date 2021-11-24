@@ -3,3 +3,4 @@ channels:
 dependencies:
 - python
 - pyiron_atomistics =0.2.30
+- seaborn
