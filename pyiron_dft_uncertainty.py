@@ -83,10 +83,6 @@ Rn 400 13"""
 
 # https://cms.mpi.univie.ac.at/vasp/vasp/Recommended_PAW_potentials_DFT_calculations_using_vasp_5_2.html
 # Element (and appendix)	default cutoff ENMAX (eV)	valency
-
-from pyiron.vasp.potential import VaspPotential
-
-
 basic_pot_text = """\
 H	250	1
 H AE	1000	1
