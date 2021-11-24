@@ -2,7 +2,6 @@ import numpy as np
 import pandas
 from pymatgen.ext.matproj import MPRester
 from ase.data import reference_states, atomic_numbers
-from pyiron_base import Settings
 from pyiron_atomistics import Project
 from pyiron_atomistics.atomistics.master.murnaghan import eV_div_A3_to_GPa
 from pyiron_atomistics.vasp.potential import VaspPotential
@@ -83,6 +82,10 @@ Rn 400 13"""
 
 # https://cms.mpi.univie.ac.at/vasp/vasp/Recommended_PAW_potentials_DFT_calculations_using_vasp_5_2.html
 # Element (and appendix)	default cutoff ENMAX (eV)	valency
+
+from pyiron.vasp.potential import VaspPotential
+
+
 basic_pot_text = """\
 H	250	1
 H AE	1000	1
@@ -593,24 +596,11 @@ def double_smooth(mat):
 
 def get_potential_encut(el, default_potential):
     vp = VaspPotential()
-    s = Settings()
     df_pot = vp.pbe.find(element=el)
-    potcar_file = [
+    encut_low = float([
         s_path for s_path in s.resource_paths if "resources" in s_path
-    ][0] + "/vasp/potentials/" + df_pot[df_pot.Name == default_potential + "-gga-pbe"].Filename.values[0][0]
-    with open(potcar_file, "r") as f:
-        content = f.readlines()
-    encut_low = None
-    for l in content:
-        if "ENMAX" in l:
-            encut_low = float(l.split()[2].replace(";", ""))
+    ][0] + "/vasp/potentials/" + df_pot[df_pot.Name == default_potential + "-gga-pbe"].ENMAX.values[0])
     return encut_low
-
-    df_pot = vp.pbe.find(element=uncertainty_parameter['pseudo_potential'].split("_")[0])
-    encut_recommended = df_pot[df_pot.Name == uncertainty_parameter['pseudo_potential'] + "-gga-pbe"].ENMAX.values[0]
-    ind_select = encut_recommended < encut_space
-    encut_min = np.min(np.arange(len(encut_space))[ind_select])
-    encut_space[encut_min], encut_recommended
 
 
 def get_delta_project_recommendation():
