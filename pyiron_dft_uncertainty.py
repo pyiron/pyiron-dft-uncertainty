@@ -1,5 +1,6 @@
 import numpy as np
 import pandas
+import time
 from pymatgen.ext.matproj import MPRester
 from ase.data import reference_states, atomic_numbers
 from pyiron_atomistics import Project
@@ -862,8 +863,7 @@ def job_name_funct(volume, encut, kpoints, digits=6):
     return job_name
 
 
-def setup_calculation(pr, structure, encut, kpoints, uncertainty_parameter):
-    electronic_energy = uncertainty_parameter['electronic_convergence']
+def setup_calculation(pr, structure, encut, kpoints, uncertainty_parameter, vasp_parameter):
     queue = uncertainty_parameter['queue']
     run_time = uncertainty_parameter['run_time']
     cores = uncertainty_parameter['cores']
@@ -879,21 +879,25 @@ def setup_calculation(pr, structure, encut, kpoints, uncertainty_parameter):
     job.set_encut(encut)
     job.set_kpoints([kpoints, kpoints, kpoints])
 
-    job.input.incar['SIGMA'] = 0.2
-    job.input.incar['ISMEAR'] = -5
+    job.input.incar['SIGMA'] = vasp_parameter['SIGMA']
+    job.input.incar['ISMEAR'] = vasp_parameter['ISMEAR']
 
-    job.input.incar['ALGO'] = 'normal'  # somehow the fast algorithm fails for Ca and Sr
-    job.input.incar['LASPH'] = True  # include non-spherical contributions - recommended by the delta project
-    job.input.incar['NELM'] = 120
-    job.input.incar['NEDOS'] = 501  # recommendation from Kurt Lejaeghere
-    job.set_convergence_precision(electronic_energy=electronic_energy)
+    job.input.incar['ALGO'] = vasp_parameter['ALGO']  # somehow the fast algorithm fails for Ca and Sr
+    job.input.incar['LASPH'] = vasp_parameter['LASPH']  # include non-spherical contributions - recommended by the delta project
+    job.input.incar['NELM'] = vasp_parameter['NELM']
+    job.input.incar['PREC'] = vasp_parameter['PREC']
+    job.input.incar['LREAL'] = vasp_parameter['LREAL']
+    job.input.incar['LWAVE'] = vasp_parameter['LWAVE']
+    job.input.incar['LORBIT'] = vasp_parameter['LORBIT']
+    job.input.incar['NEDOS'] =vasp_parameter['NEDOS']  # recommendation from Kurt Lejaeghere
+    job.set_convergence_precision(electronic_energy=vasp_parameter['EDIFF'])
 
     job.server.run_time = run_time
     # job.input.incar['NCORE'] = int(np.sqrt(cores))  # only required for larger calculations
     job.server.cores = cores
-    job.server.memory_limit = str(int(3 * memory_factor * cores)) + 'GB'
-    if '5.4.4_bl' in job.executable.list_executables():
-        job.executable.version = '5.4.4_bl'  # use patched version
+    job.server.memory_limit = str(int(3 * memory_factor * cores))
+    if '5.4.4_bl2' in job.executable.list_executables():
+        job.executable.version = '5.4.4_bl2'  # use patched version
 
     job.write_charge_density = False
     job.write_wave_funct = False
@@ -1003,7 +1007,7 @@ def wait_for_jobs_to_be_done(project, sleep_period=30, iteration=10000):
             break
 
 
-def calc_set_of_jobs(pr, parameter_lst, uncertainty_parameter, sleep_period=30, iteration=10000):
+def calc_set_of_jobs(pr, parameter_lst, uncertainty_parameter, vasp_parameter, sleep_period=30, iteration=10000):
     df_job_table = pr.job_table()
     if len(df_job_table) == 0:
         job_name_lst = []
@@ -1024,20 +1028,22 @@ def calc_set_of_jobs(pr, parameter_lst, uncertainty_parameter, sleep_period=30, 
                 structure=structure,
                 encut=encut,
                 kpoints=kpoints,
-                uncertainty_parameter=uncertainty_parameter
+                uncertainty_parameter=uncertainty_parameter,
+                vasp_parameter=vasp_parameter,
             )
             job.run()
     wait_for_jobs_to_be_done(project=pr, sleep_period=sleep_period, iteration=iteration)
 
 
-def run_calc_alat(pr, alat_lst, encut, kpoints, uncertainty_parameter, sleep_period=30, iteration=10000, pytab=None):
+def run_calc_alat(pr, alat_lst, encut, kpoints, uncertainty_parameter, vasp_parameter, sleep_period=30, iteration=10000, pytab=None):
     parameter_lst = [[alat, encut, kpoints] for alat in alat_lst]
     calc_set_of_jobs(
         pr=pr,
         parameter_lst=parameter_lst,
         uncertainty_parameter=uncertainty_parameter,
+        vasp_parameter=vasp_parameter,
         sleep_period=sleep_period,
-        iteration=iteration
+        iteration=iteration,
     )
     if pytab is None:
         pytab = setup_pyiron_table(project=pr)
@@ -1050,3 +1056,36 @@ def remove_none(lst):
     return [l for l in lst if l is not None]
 
 
+def update_uncertainty_parameter(uncertainty_parameter):
+    crystalstructure, alat_base = lattice_constants_for_element_ase(
+        element=uncertainty_parameter['element']
+    )
+    if uncertainty_parameter['points_pre'] is None:
+        uncertainty_parameter['points_pre'] = uncertainty_parameter['points']
+    if uncertainty_parameter['vol_range_pre'] is None:
+        uncertainty_parameter['vol_range_pre'] = uncertainty_parameter['vol_range']
+    if uncertainty_parameter['pseudo_potential'] is None:
+        uncertainty_parameter['pseudo_potential'] = pot_dict[uncertainty_parameter['element']]
+    if uncertainty_parameter['encut_start'] is None:
+        uncertainty_parameter['encut_start'] = find_recommended_encut(
+            element=None, 
+            element_str=uncertainty_parameter['pseudo_potential'], 
+            xc='pbe'
+        )
+    if uncertainty_parameter['project_name'] is None:
+        uncertainty_parameter['project_name'] = uncertainty_parameter['pseudo_potential']
+    if uncertainty_parameter['crystal_structure'] is None:
+        uncertainty_parameter['crystal_structure'] = crystalstructure
+    if uncertainty_parameter['alat_guess'] is None:
+        if not (uncertainty_parameter['crystal_structure'] == crystalstructure.lower()): 
+            if crystalstructure.lower() == 'bcc':
+                alat_base = np.sqrt(3) / np.sqrt(2) * alat_base
+            elif crystalstructure.lower() == 'hcp':
+                if enforce_crystal_structure.lower() == 'fcc':
+                    alat_base = np.sqrt(2) * alat_base
+                else:
+                    alat_base = np.sqrt(5) / np.sqrt(4) * alat_base
+            else:
+                alat_base = np.sqrt(2) / np.sqrt(3) * alat_base
+        uncertainty_parameter['alat_guess'] = alat_base
+    return uncertainty_parameter

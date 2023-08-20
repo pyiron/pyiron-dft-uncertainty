@@ -1,0 +1,35 @@
+convergence_settings:
+  encut_end: 1200
+  encut_start: 200
+  encut_step: 20
+  kpoint_end: 91
+  kpoint_start: 11
+  kpoint_step: 2
+element_settings:
+  alat_guess: null
+  crystal_structure: null
+  element: Cu
+  pseudo_potential: null
+evcurve_settings:
+  points: 21
+  points_pre: 11
+  vol_range: 0.1
+  vol_range_pre: 0.2
+server_settings:
+  cores: 10
+  memory_factor: 4
+  project_name: null
+  queue: s_cmfe
+  run_time: 20000
+vasp_settings:
+  ALGO: normal
+  EDIFF: 1.0e-09
+  ISMEAR: -5
+  LASPH: true
+  LORBIT: 0
+  LREAL: false
+  LWAVE: false
+  NEDOS: 501
+  NELM: 120
+  PREC: Accurate
+  SIGMA: 0.2

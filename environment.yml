@@ -2,5 +2,5 @@ channels:
 - conda-forge
 dependencies:
 - python
-- pyiron_atomistics =0.2.30
+- pyiron_atomistics =0.3.1
 - seaborn
