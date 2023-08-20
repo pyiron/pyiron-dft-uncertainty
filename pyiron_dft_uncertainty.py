@@ -893,11 +893,8 @@ def setup_calculation(pr, structure, encut, kpoints, uncertainty_parameter, vasp
     job.set_convergence_precision(electronic_energy=vasp_parameter['EDIFF'])
 
     job.server.run_time = run_time
-    # job.input.incar['NCORE'] = int(np.sqrt(cores))  # only required for larger calculations
     job.server.cores = cores
     job.server.memory_limit = str(int(3 * memory_factor * cores))
-    if '5.4.4_bl2' in job.executable.list_executables():
-        job.executable.version = '5.4.4_bl2'  # use patched version
 
     job.write_charge_density = False
     job.write_wave_funct = False
