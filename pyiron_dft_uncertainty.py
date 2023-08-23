@@ -883,16 +883,17 @@ def setup_calculation(pr, structure, encut, kpoints, uncertainty_parameter, vasp
     job.input.incar['ISMEAR'] = vasp_parameter['ISMEAR']
 
     job.input.incar['ALGO'] = vasp_parameter['ALGO']  # somehow the fast algorithm fails for Ca and Sr
-    job.input.incar['LASPH'] = vasp_parameter['LASPH']  # include non-spherical contributions - recommended by the delta project
+    job.input.incar['LASPH'] = bool(vasp_parameter['LASPH'])  # include non-spherical contributions - recommended by the delta project
     job.input.incar['NELM'] = vasp_parameter['NELM']
     job.input.incar['PREC'] = vasp_parameter['PREC']
-    job.input.incar['LREAL'] = vasp_parameter['LREAL']
-    job.input.incar['LWAVE'] = vasp_parameter['LWAVE']
+    job.input.incar['LREAL'] = bool(vasp_parameter['LREAL'])
+    job.input.incar['LWAVE'] = bool(vasp_parameter['LWAVE'])
     job.input.incar['LORBIT'] = vasp_parameter['LORBIT']
     job.input.incar['NEDOS'] =vasp_parameter['NEDOS']  # recommendation from Kurt Lejaeghere
     job.set_convergence_precision(electronic_energy=vasp_parameter['EDIFF'])
 
     job.server.run_time = run_time
+    # job.input.incar['NCORE'] = int(np.sqrt(cores))  # only required for larger calculations
     job.server.cores = cores
     job.server.memory_limit = str(int(3 * memory_factor * cores))
 
@@ -907,7 +908,7 @@ def get_strain(job):
 
 def get_e_conv_level(job):
     return np.max(np.abs(
-        job['output/generic/dft/scf_energy_free'][0] -
+        np.array(job['output/generic/dft/scf_energy_free'][0]) -
         job['output/generic/dft/scf_energy_free'][0][-1]
     )[-10:])
 
